@@ -26,10 +26,21 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install
-      - uses: changesets/action@v1
+      - id: changesets
+        uses: changesets/action@v1
         with:
+          # Only run `publish:` after the Version Packages PR has been
+          # merged (i.e. there are NO pending changesets to consume but
+          # there ARE packages with versions higher than what's on npm).
+          # The action's hasChangesets output is true while a Version PR
+          # is open / pending merge — gate publish to the opposite case.
+          # On every push to main: if changesets/*.md exist, open Version PR.
+          # When that PR merges (changesets/*.md gone), publish.
           publish: pnpm run release
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Skip until at least one changeset exists. Bootstrap has no
+        # changesets yet, so don't trigger publish on the empty state.
+        if: hashFiles('.changeset/*.md') != '' || hashFiles('.changeset/**/*.md') != ''
