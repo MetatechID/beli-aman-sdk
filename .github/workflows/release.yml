@@ -29,18 +29,15 @@ jobs:
       - id: changesets
         uses: changesets/action@v1
         with:
-          # Only run `publish:` after the Version Packages PR has been
-          # merged (i.e. there are NO pending changesets to consume but
-          # there ARE packages with versions higher than what's on npm).
-          # The action's hasChangesets output is true while a Version PR
-          # is open / pending merge — gate publish to the opposite case.
-          # On every push to main: if changesets/*.md exist, open Version PR.
-          # When that PR merges (changesets/*.md gone), publish.
+          # changesets/action is internally idempotent: when `.changeset/*.md`
+          # files exist, it opens/updates a "Version Packages" PR; when those
+          # files have been consumed (PR merged) AND the package.json version
+          # is ahead of what's on npm, it runs `publish:` to push to npm.
+          # No outer `if:` gate — gating here breaks the post-merge publish
+          # path (the .md is gone after merge, so the gate evaluates false
+          # and the publish step never runs).
           publish: pnpm run release
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        # Skip until at least one changeset exists. Bootstrap has no
-        # changesets yet, so don't trigger publish on the empty state.
-        if: hashFiles('.changeset/*.md') != '' || hashFiles('.changeset/**/*.md') != ''

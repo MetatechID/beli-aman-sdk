@@ -55,7 +55,7 @@ export function StepDone() {
         <button
           className="ba-btn-primary ba-cta-fw"
           onClick={handleConfirm}
-          disabled={confirming || state === "ESCROW_RELEASED"}
+          disabled={confirming}
         >
           {confirming ? "Memproses..." : "Saya sudah terima paket"}
         </button>

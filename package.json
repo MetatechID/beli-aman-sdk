@@ -36,10 +36,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "echo 'TODO build pipeline (tsup/rollup) — wired in migration Step 3'",
-    "test": "echo 'TODO tests — wired in migration Step 3'",
-    "lint": "echo 'TODO eslint — wired in migration Step 3'",
-    "typecheck": "echo 'TODO tsc --noEmit — wired in migration Step 3'",
+    "build": "tsup",
+    "test": "echo 'no SDK tests yet — wire vitest in a follow-up'",
+    "lint": "echo 'no SDK lint yet — wire eslint in a follow-up'",
+    "typecheck": "tsc --noEmit -p src/tsconfig.json",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"
@@ -51,7 +51,14 @@
   "dependencies": {},
   "//dependencies": "Will add @jaringan-dagang/beckn-protocol ^0.1.0 once that package publishes to npm (migration Step 2 in jaringan-dagang-protocol repo). Empty deps lets pnpm install bootstrap on day 1.",
   "devDependencies": {
-    "@changesets/cli": "^2.27.7"
+    "@changesets/cli": "^2.27.7",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "firebase": "^10.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.5"
   },
   "publishConfig": {
     "access": "public",
