@@ -36,10 +36,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "echo 'TODO build pipeline (tsup/rollup)'",
-    "test": "echo 'TODO tests'",
-    "lint": "echo 'TODO eslint'",
-    "typecheck": "echo 'TODO tsc --noEmit'",
+    "build": "echo 'TODO build pipeline (tsup/rollup) — wired in migration Step 3'",
+    "test": "echo 'TODO tests — wired in migration Step 3'",
+    "lint": "echo 'TODO eslint — wired in migration Step 3'",
+    "typecheck": "echo 'TODO tsc --noEmit — wired in migration Step 3'",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish"
