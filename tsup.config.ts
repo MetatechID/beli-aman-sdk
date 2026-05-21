@@ -15,7 +15,7 @@ export default defineConfig({
   external: ["react", "react-dom", "firebase", "firebase/app", "firebase/auth"],
   onSuccess: async () => {
     // Ship the unstyled CSS alongside the JS so consumers can
-    // `import "@beli-aman/sdk/styles.css"` and then override the
+    // `import "@jaringan-dagang/beli-aman-sdk/styles.css"` and then override the
     // CSS variables it defines.
     mkdirSync(resolve("dist"), { recursive: true });
     copyFileSync(resolve("src/src/styles.css"), resolve("dist/styles.css"));

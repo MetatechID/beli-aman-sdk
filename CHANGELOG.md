@@ -1,4 +1,4 @@
-# @beli-aman/sdk
+# @jaringan-dagang/beli-aman-sdk
 
 ## 0.1.0
 

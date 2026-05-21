@@ -1,7 +1,7 @@
-# @beli-aman/sdk
+# @jaringan-dagang/beli-aman-sdk
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/@beli-aman/sdk)](https://www.npmjs.com/package/@beli-aman/sdk)
+[![npm](https://img.shields.io/npm/v/@jaringan-dagang/beli-aman-sdk)](https://www.npmjs.com/package/@jaringan-dagang/beli-aman-sdk)
 
 Embeddable buyer-protection / escrow for Indonesian DTC commerce.
 Drop the `<BayarAman>` React component into your checkout — funds are
@@ -38,15 +38,15 @@ without per-merchant integration work.
 ## Install
 
 ```bash
-npm install @beli-aman/sdk
+npm install @jaringan-dagang/beli-aman-sdk
 # or
-pnpm add @beli-aman/sdk
+pnpm add @jaringan-dagang/beli-aman-sdk
 ```
 
 ## Quickstart
 
 ```tsx
-import { BayarAman, BeliAmanProvider } from "@beli-aman/sdk";
+import { BayarAman, BeliAmanProvider } from "@jaringan-dagang/beli-aman-sdk";
 
 export default function App() {
   return (

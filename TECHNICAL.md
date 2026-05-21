@@ -1,4 +1,4 @@
-# @beli-aman/sdk — technical architecture
+# @jaringan-dagang/beli-aman-sdk — technical architecture
 
 > Apache-2.0. Embed buyer-protection / escrow into any storefront
 > that's running on the [Jaringan Dagang protocol](https://github.com/MetatechID/jaringan-dagang-protocol)

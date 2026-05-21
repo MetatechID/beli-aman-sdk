@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in `@beli-aman/sdk`.
+Thanks for your interest in `@jaringan-dagang/beli-aman-sdk`.
 
 ## Before you start
 
