@@ -109,8 +109,51 @@ export interface InvoiceResponse {
   expires_at?: string | null;
 }
 
+export interface OtpRequestBody {
+  channel: "wa" | "email";
+  contact: string;
+}
+
+export interface OtpVerifyBody extends OtpRequestBody {
+  code: string;
+}
+
+export interface OtpVerifyResponse {
+  custom_token: string;
+  profile: {
+    id: string;
+    google_sub: string | null;
+    email: string | null;
+    display_name: string | null;
+    photo_url: string | null;
+    phone_e164: string | null;
+    created_at: string;
+  };
+}
+
+/** OTP request/verify endpoints are pre-signin → call them WITHOUT a Bearer
+ *  header. We use a stripped-down ApiOptions shape (just bapUrl) for these. */
+async function callUnauthed<T = any>(bapUrl: string, path: string, body: object): Promise<T> {
+  const url = bapUrl.replace(/\/$/, "") + path;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const parsed = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : null;
+  if (!res.ok) {
+    throw new ApiError(res.status, parsed, (parsed as any)?.detail || res.statusText);
+  }
+  return parsed as T;
+}
+
 export const api = {
   exchangeToken: (opts: ApiOptions) => call(opts, "/api/v1/auth/exchange", { method: "POST" }),
+  requestOtp: (bapUrl: string, body: OtpRequestBody) =>
+    callUnauthed<{ ok: boolean; message: string }>(bapUrl, "/api/v1/auth/otp/request", body),
+  verifyOtp: (bapUrl: string, body: OtpVerifyBody) =>
+    callUnauthed<OtpVerifyResponse>(bapUrl, "/api/v1/auth/otp/verify", body),
   me: (opts: ApiOptions) => call(opts, "/api/v1/me"),
   listAddresses: (opts: ApiOptions) => call(opts, "/api/v1/me/addresses"),
   createAddress: (opts: ApiOptions, body: any) =>

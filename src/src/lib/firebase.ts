@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  signInWithCustomToken as fbSignInWithCustomToken,
   onAuthStateChanged,
   signOut,
   type User,
@@ -55,6 +56,19 @@ export async function signInWithGoogle(config: FirebaseConfig): Promise<string> 
     }
     throw err;
   }
+}
+
+/** Sign in with a Firebase custom token (minted by the BAP after OTP verify).
+ *  After this resolves, `currentUser.getIdToken()` returns a normal Firebase
+ *  ID token — every downstream call site (lib/api, BAP /auth/exchange, etc.)
+ *  is unchanged. */
+export async function signInWithCustomToken(
+  config: FirebaseConfig,
+  customToken: string,
+): Promise<string> {
+  const auth = getFirebaseAuth(config);
+  const result = await fbSignInWithCustomToken(auth, customToken);
+  return await result.user.getIdToken();
 }
 
 export async function resolveRedirectSignIn(config: FirebaseConfig): Promise<string | null> {

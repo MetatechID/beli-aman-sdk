@@ -5,6 +5,12 @@ export const t = {
   cta: {
     beliAman: "Bayar Aman",
     continueWithGoogle: "Lanjutkan dengan Google",
+    continueWithWhatsApp: "Lanjutkan dengan WhatsApp",
+    continueWithEmail: "Lanjutkan dengan Email",
+    sendCode: "Kirim Kode",
+    verifyCode: "Verifikasi",
+    useDifferentMethod: "Gunakan cara lain",
+    resendCode: "Kirim ulang kode",
     continueToReview: "Lanjut ke Tinjauan",
     continueToPayment: "Lanjut → Bayar Aman",
     payNow: "Bayar Aman Sekarang",
@@ -17,7 +23,12 @@ export const t = {
   step: {
     signInTitle: "Masuk untuk Melindungi Pembelian Anda",
     signInBlurb:
-      "Beli Aman menahan dana Anda di escrow sampai barang diterima. Tidak ada akun baru — gunakan Google.",
+      "Beli Aman menahan dana Anda di escrow sampai barang diterima.",
+    signInPhonePlaceholder: "Nomor WhatsApp (08… atau +62…)",
+    signInEmailPlaceholder: "Alamat email Anda",
+    signInCodePlaceholder: "Kode 6 digit",
+    signInCodeSentWa: "Kode telah dikirim via WhatsApp ke",
+    signInCodeSentEmail: "Kode telah dikirim ke",
     cartReviewTitle: "Tinjau Pesanan",
     confirmTitle: "Konfirmasi Pembayaran",
     paymentTitle: "Pilih Metode Pembayaran",
@@ -67,6 +78,9 @@ export const t = {
     signInFailed: "Gagal masuk. Coba lagi.",
     networkFailed: "Koneksi terputus. Coba lagi dalam beberapa detik.",
     sessionExpired: "Sesi berakhir. Silakan masuk kembali.",
+    invalidPhone: "Nomor WhatsApp tidak valid.",
+    invalidEmail: "Alamat email tidak valid.",
+    invalidCode: "Kode salah atau sudah kedaluwarsa.",
   },
 } as const;
 
