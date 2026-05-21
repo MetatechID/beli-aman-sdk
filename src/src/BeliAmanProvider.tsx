@@ -22,7 +22,7 @@ import {
   signOutCurrent,
   type FirebaseConfig,
 } from "./lib/firebase";
-import { api, type ApiOptions, type OrderResponse, type ShippingChoice } from "./lib/api";
+import { api, type ApiOptions, type InvoiceResponse, type OrderResponse, type ShippingChoice } from "./lib/api";
 import {
   clearFlow,
   readFlow,
@@ -87,11 +87,8 @@ interface BeliAmanContextValue {
   brandSlug: string;
   items: CartItemInput[];
 
-  // mocked payment selection (visual fidelity only)
-  paymentTab: "va" | "ewallet" | "qris" | "card" | "retail";
-  paymentBank: string;
-  setPaymentTab: (t: BeliAmanContextValue["paymentTab"]) => void;
-  setPaymentBank: (b: string) => void;
+  // active Xendit invoice — set after proceedToPayment(); drives StepPayment.
+  invoice: InvoiceResponse | null;
 
   // navigation
   open: (args: OpenArgs) => void;
@@ -109,7 +106,12 @@ interface BeliAmanContextValue {
   defaultAddress: SavedAddress | null;
   submitCartReview: (input: { addressInline: any; shipping?: ShippingChoice }) => Promise<void>;
   proceedToPayment: () => Promise<void>;
-  confirmPayment: () => Promise<void>;
+  /** Mark the order received → release escrow. Called from the order
+   *  timeline's "Saya sudah terima paket" button. */
+  confirmReceipt: () => Promise<void>;
+  /** Re-fetch the current order from the BAP. The payment step polls
+   *  this to detect ESCROW_HELD after the Xendit webhook fires. */
+  refreshOrder: () => Promise<OrderResponse | null>;
   resetFlow: () => void;
 
   // helpers
@@ -166,11 +168,8 @@ export function BeliAmanProvider({
   const [brandSlug, setBrandSlug] = useState(config.brand.slug);
   const [items, setItems] = useState<CartItemInput[]>([]);
   const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Mocked payment-screen state (purely visual)
-  const [paymentTab, setPaymentTab] = useState<BeliAmanContextValue["paymentTab"]>("va");
-  const [paymentBank, setPaymentBank] = useState<string>("BCA");
 
   // Restore flow on mount (single shot).
   // We only auto-restore in two narrow cases:
@@ -368,22 +367,32 @@ export function BeliAmanProvider({
     try {
       const reviewed = await api.advanceReview(apiOpts, order.id);
       setOrder(reviewed);
+      const inv = await api.createInvoice(apiOpts, reviewed.id);
+      setInvoice(inv);
       setStep("payment");
     } catch (e: any) {
-      setError(e?.message || "Could not advance to payment");
+      setError(e?.message || "Could not start payment");
     }
   }, [apiOpts, order]);
 
-  const confirmPayment = useCallback(async () => {
-    if (!order) return;
-    setStep("processing");
+  const refreshOrder = useCallback(async (): Promise<OrderResponse | null> => {
+    if (!order) return null;
     try {
-      const paid = await api.confirmPayment(apiOpts, order.id);
-      setOrder(paid);
-      setStep("done");
+      const fresh = await api.getOrder(apiOpts, order.id);
+      setOrder(fresh);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }, [apiOpts, order]);
+
+  const confirmReceipt = useCallback(async () => {
+    if (!order) return;
+    try {
+      const released = await api.confirmReceipt(apiOpts, order.id);
+      setOrder(released);
     } catch (e: any) {
-      setError(e?.message || "Could not confirm payment");
-      setStep("payment");
+      setError(e?.message || "Could not confirm receipt");
     }
   }, [apiOpts, order]);
 
@@ -414,10 +423,7 @@ export function BeliAmanProvider({
     order,
     brandSlug,
     items,
-    paymentTab,
-    paymentBank,
-    setPaymentTab,
-    setPaymentBank,
+    invoice,
     open,
     close,
     goTo,
@@ -427,7 +433,8 @@ export function BeliAmanProvider({
     defaultAddress,
     submitCartReview,
     proceedToPayment,
-    confirmPayment,
+    confirmReceipt,
+    refreshOrder,
     resetFlow,
     apiOpts,
     formatPrice,

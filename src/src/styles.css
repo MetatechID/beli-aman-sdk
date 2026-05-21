@@ -252,6 +252,9 @@
 .ba-pay-tab { appearance: none; background: transparent; border: 0; padding: 8px 12px; border-radius: var(--ba-r-sm); font-size: 12px; font-weight: 600; color: var(--ba-c-text-muted); cursor: pointer; white-space: nowrap; }
 .ba-pay-tab-active { background: #FFFFFF; color: var(--ba-c-text); box-shadow: 0 1px 4px rgba(15,23,42,0.08); }
 .ba-pay-pane { padding: 14px; background: #FFFFFF; border-radius: var(--ba-r-md); border: 1px solid rgba(15, 23, 42, 0.08); }
+.ba-xendit-frame-wrap { margin: 12px 0; border-radius: var(--ba-r-md); overflow: hidden; border: 1px solid rgba(15, 23, 42, 0.10); background: #fff; }
+.ba-xendit-frame { width: 100%; min-height: 520px; border: 0; display: block; }
+.ba-pay-actions { display: flex; gap: 8px; margin-bottom: 8px; }
 .ba-bank-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .ba-bank-card { appearance: none; flex: 1; min-width: 80px; padding: 10px 8px; background: #fff; border: 1px solid rgba(15,23,42,0.10); border-radius: var(--ba-r-sm); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
 .ba-bank-card-active { border-color: var(--ba-c-primary); background: #ECFDF5; }

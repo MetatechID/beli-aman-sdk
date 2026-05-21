@@ -95,10 +95,18 @@ export interface OrderResponse {
   payment_method_snapshot?: any;
   created_at: string;
   escrow_ledger?: { entry_type: string; amount_idr: number; description: string; created_at: string }[];
-  shipped_simulated_at?: string | null;
-  delivered_simulated_at?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
   auto_release_at?: string | null;
   released_at?: string | null;
+}
+
+export interface InvoiceResponse {
+  order_id: string;
+  state: string;
+  invoice_id: string;
+  invoice_url: string;
+  expires_at?: string | null;
 }
 
 export const api = {
@@ -119,7 +127,9 @@ export const api = {
     call<OrderResponse>(opts, `/api/v1/orders/${orderId}/auth`, { method: "PATCH", body: JSON.stringify(body) }),
   advanceReview: (opts: ApiOptions, orderId: string) =>
     call<OrderResponse>(opts, `/api/v1/orders/${orderId}/review`, { method: "PATCH", body: "{}" }),
-  confirmPayment: (opts: ApiOptions, orderId: string) =>
-    call<OrderResponse>(opts, `/api/v1/orders/${orderId}/confirm-payment`, { method: "POST", body: "{}" }),
+  createInvoice: (opts: ApiOptions, orderId: string) =>
+    call<InvoiceResponse>(opts, `/api/v1/orders/${orderId}/invoice`, { method: "POST", body: "{}" }),
+  confirmReceipt: (opts: ApiOptions, orderId: string) =>
+    call<OrderResponse>(opts, `/api/v1/orders/${orderId}/confirm-receipt`, { method: "POST", body: "{}" }),
   getOrder: (opts: ApiOptions, orderId: string) => call<OrderResponse>(opts, `/api/v1/orders/${orderId}`),
 };

@@ -1,13 +1,27 @@
 "use client";
 
+import { useState } from "react";
+
 import { useBeliAman } from "../BeliAmanProvider";
 import { formatIDR, t } from "../lib/i18n";
 
 export function StepDone() {
-  const { order, close, resetFlow } = useBeliAman();
+  const { order, close, resetFlow, confirmReceipt } = useBeliAman();
+  const [confirming, setConfirming] = useState(false);
 
   const orderId = order?.id;
   const total = order?.total_idr ?? 0;
+  const state = order?.state;
+  const canConfirmReceipt = state === "FULFILLING" || state === "RECEIVED";
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      await confirmReceipt();
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   return (
     <div className="ba-step ba-step-done">
@@ -29,11 +43,27 @@ export function StepDone() {
           <span>ID Pesanan</span>
           <strong className="ba-mono">{orderId?.slice(0, 8) || "—"}</strong>
         </div>
+        {state ? (
+          <div className="ba-row">
+            <span>Status</span>
+            <strong className="ba-mono">{state}</strong>
+          </div>
+        ) : null}
       </div>
+
+      {canConfirmReceipt ? (
+        <button
+          className="ba-btn-primary ba-cta-fw"
+          onClick={handleConfirm}
+          disabled={confirming || state === "ESCROW_RELEASED"}
+        >
+          {confirming ? "Memproses..." : "Saya sudah terima paket"}
+        </button>
+      ) : null}
 
       {orderId ? (
         <a
-          className="ba-btn-primary ba-cta-fw"
+          className={canConfirmReceipt ? "ba-btn-secondary ba-cta-fw" : "ba-btn-primary ba-cta-fw"}
           href={`/orders/${orderId}`}
           onClick={() => resetFlow()}
         >
