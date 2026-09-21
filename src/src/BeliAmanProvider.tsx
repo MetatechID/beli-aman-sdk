@@ -215,6 +215,29 @@ export function BeliAmanProvider({
         .then((o) => {
           setOrder(o);
           if (o.state === "ESCROW_HELD") setStep("done");
+          // Restore the invoice from the order's payment snapshot so
+          // StepPayment shows the gateway iframe / QRIS card instead of the
+          // "Menyiapkan halaman pembayaran…" placeholder after a refresh.
+          const snap = (
+            o as {
+              payment_method_snapshot?: {
+                invoice_url?: string;
+                invoice_id?: string;
+                qr_content?: string | null;
+                qr_image_url?: string | null;
+              };
+            }
+          ).payment_method_snapshot;
+          if (snap?.invoice_url || snap?.qr_content || snap?.qr_image_url) {
+            setInvoice({
+              order_id: o.id,
+              state: o.state,
+              invoice_id: snap.invoice_id ?? "",
+              invoice_url: snap.invoice_url ?? "",
+              qr_content: snap.qr_content ?? null,
+              qr_image_url: snap.qr_image_url ?? null,
+            });
+          }
         })
         .catch(() => {
           /* stale order — ignore */

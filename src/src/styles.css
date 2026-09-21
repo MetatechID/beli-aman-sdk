@@ -283,6 +283,7 @@
 .ba-qr-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px; }
 .ba-qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .ba-qr-label { font-size: 12px; color: var(--ba-c-text-muted); font-weight: 600; }
+.ba-qr-img { display: block; width: 220px; height: 220px; border-radius: var(--ba-r-md); border: 1px solid rgba(15, 23, 42, 0.10); background: #fff; }
 
 .ba-card-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
 

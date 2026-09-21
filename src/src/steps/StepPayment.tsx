@@ -1,17 +1,58 @@
 "use client";
 
+// Classic JSX transform (vitest/esbuild has no automatic runtime) — React
+// must be in scope for the JSX below. Next.js consumers are unaffected.
+import React from "react";
 import { useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { useBeliAman } from "../BeliAmanProvider";
 import { formatIDR, t } from "../lib/i18n";
+import { isQrisInvoice } from "../lib/payments";
 
 const POLL_INTERVAL_MS = 4000;
+
+/** Inline QRIS card — rendered instead of the gateway iframe when the
+ *  invoice carries a QR payload (qr_content) or a hosted QR image
+ *  (qr_image_url), e.g. for the Dipay provider. Exported so unit tests can
+ *  render it in isolation. */
+export function QrisCard({
+  qrContent,
+  qrImageUrl,
+}: {
+  qrContent?: string | null;
+  qrImageUrl?: string | null;
+}) {
+  return (
+    <div className="ba-qr-card">
+      <div className="ba-qr-wrap">
+        {qrContent ? (
+          <QRCodeSVG value={qrContent} size={220} />
+        ) : (
+          <img
+            src={qrImageUrl ?? ""}
+            alt="QRIS"
+            className="ba-qr-img"
+            style={{ width: 220, height: 220 }}
+          />
+        )}
+        <span className="ba-qr-label">QRIS</span>
+      </div>
+      <p className="ba-muted ba-center" style={{ margin: 0 }}>
+        {t.payment.qrisInstruction}
+      </p>
+    </div>
+  );
+}
 
 export function StepPayment() {
   const { order, invoice, refreshOrder, goTo } = useBeliAman();
   const total = order?.total_idr ?? 0;
   const invoiceUrl = invoice?.invoice_url;
   const expiresAt = invoice?.expires_at;
+  const qrContent = invoice?.qr_content;
+  const qrImageUrl = invoice?.qr_image_url;
+  const hasQr = isQrisInvoice(invoice);
 
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   useEffect(() => {
@@ -31,10 +72,13 @@ export function StepPayment() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   })();
 
-  // Poll the order's state until the Xendit webhook flips it to ESCROW_HELD.
+  // Poll the order's state until the gateway webhook flips it to ESCROW_HELD.
+  // Runs whenever there is anything to pay against: a hosted-checkout URL
+  // (Xendit/OY/Sento) or an inline QRIS payload/image (Dipay).
   const pollingRef = useRef(false);
+  const hasPaymentTarget = Boolean(invoiceUrl || qrImageUrl || qrContent);
   useEffect(() => {
-    if (!invoiceUrl || pollingRef.current) return;
+    if (!hasPaymentTarget || pollingRef.current) return;
     pollingRef.current = true;
     let stopped = false;
     const tick = async () => {
@@ -52,9 +96,11 @@ export function StepPayment() {
       stopped = true;
       pollingRef.current = false;
     };
-  }, [invoiceUrl, refreshOrder, goTo]);
+  }, [hasPaymentTarget, invoiceUrl, qrImageUrl, qrContent, refreshOrder, goTo]);
 
-  if (!invoiceUrl) {
+  // No hosted page AND no QR → nothing to render yet (invoice still being
+  // minted server-side).
+  if (!hasPaymentTarget) {
     return (
       <div className="ba-step ba-step-payment">
         <p className="ba-muted ba-center">Menyiapkan halaman pembayaran...</p>
@@ -80,25 +126,31 @@ export function StepPayment() {
         </div>
       </div>
 
-      <div className="ba-xendit-frame-wrap">
-        <iframe
-          className="ba-xendit-frame"
-          src={invoiceUrl}
-          title="Beli Aman × Xendit"
-          allow="payment"
-        />
-      </div>
+      {hasQr ? (
+        <QrisCard qrContent={qrContent} qrImageUrl={qrImageUrl} />
+      ) : (
+        <div className="ba-xendit-frame-wrap">
+          <iframe
+            className="ba-xendit-frame"
+            src={invoiceUrl}
+            title="Beli Aman × Xendit"
+            allow="payment"
+          />
+        </div>
+      )}
 
-      <div className="ba-pay-actions">
-        <a
-          className="ba-btn-secondary ba-cta-fw"
-          href={invoiceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Buka di tab baru
-        </a>
-      </div>
+      {invoiceUrl ? (
+        <div className="ba-pay-actions">
+          <a
+            className="ba-btn-secondary ba-cta-fw"
+            href={invoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Buka di tab baru
+          </a>
+        </div>
+      ) : null}
 
       <p className="ba-fineprint ba-center">
         🛡️ Dana ditahan oleh Beli Aman sampai Anda menerima barang.

@@ -107,6 +107,10 @@ export interface InvoiceResponse {
   invoice_id: string;
   invoice_url: string;
   expires_at?: string | null;
+  /** Dipay/QRIS: raw QRIS payload to render as a QR code in-page. */
+  qr_content?: string | null;
+  /** Dipay/QRIS: pre-rendered QR image URL (when the BAP hosts the image). */
+  qr_image_url?: string | null;
 }
 
 export interface OtpRequestBody {
