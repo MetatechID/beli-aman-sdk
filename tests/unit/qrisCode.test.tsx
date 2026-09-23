@@ -16,9 +16,11 @@ import {
   PROVIDER_LABEL,
   PROVIDER_METHODS,
   _selfCheck,
+  getQrisPayment,
   isQrisInvoice,
   type PaymentProvider,
 } from "../../src/src/lib/payments";
+import { titleForStep } from "../../src/src/BeliAmanProvider";
 import { QrisCard } from "../../src/src/steps/StepPayment";
 
 const FAKE_QRIS = "00020101021126610014COM.GO-JEK.WWW0118936009143012345678";
@@ -47,6 +49,34 @@ describe("payments.ts dipay provider", () => {
   });
 });
 
+describe("QRIS invoice normalization", () => {
+  it("accepts canonical BAP qris_* fields and legacy qr_* aliases", () => {
+    expect(getQrisPayment({ qris_content: FAKE_QRIS, qris_image_url: " https://cdn.example/qr.png " })).toEqual({
+      content: FAKE_QRIS,
+      imageUrl: "https://cdn.example/qr.png",
+    });
+    expect(getQrisPayment({ qr_content: FAKE_QRIS, qr_image_url: "https://legacy.example/qr.png" })).toEqual({
+      content: FAKE_QRIS,
+      imageUrl: "https://legacy.example/qr.png",
+    });
+  });
+
+  it("ignores blank QR fields", () => {
+    expect(getQrisPayment({ qris_content: " ", qr_content: "", qris_image_url: null })).toEqual({
+      content: null,
+      imageUrl: null,
+    });
+  });
+});
+
+describe("provider-aware payment copy", () => {
+  it("includes the selected provider in payment titles", () => {
+    expect(titleForStep("payment", "dipay")).toBe("Bayar via Dipay");
+    expect(titleForStep("payment", "oy")).toBe("Bayar via OY Indonesia");
+    expect(titleForStep("payment", null)).toBe("Bayar via Xendit");
+  });
+});
+
 describe("isQrisInvoice", () => {
   it("is false for null/undefined/plain hosted-checkout invoices", () => {
     expect(isQrisInvoice(null)).toBe(false);
@@ -55,19 +85,23 @@ describe("isQrisInvoice", () => {
     expect(isQrisInvoice({ qr_content: null, qr_image_url: null })).toBe(false);
   });
 
-  it("is true when qr_content or qr_image_url is present", () => {
+  it("is true for canonical or legacy QR content and images", () => {
+    expect(isQrisInvoice({ qris_content: FAKE_QRIS })).toBe(true);
+    expect(isQrisInvoice({ qris_image_url: "https://cdn.example.com/qr.png" })).toBe(true);
     expect(isQrisInvoice({ qr_content: FAKE_QRIS })).toBe(true);
-    expect(isQrisInvoice({ qr_image_url: "https://cdn.example.com/qr.png" })).toBe(true);
+    expect(isQrisInvoice({ qr_image_url: "https://legacy.example.com/qr.png" })).toBe(true);
     expect(isQrisInvoice({ qr_content: FAKE_QRIS, qr_image_url: null })).toBe(true);
-    // Empty strings don't count as QR content.
-    expect(isQrisInvoice({ qr_content: "" })).toBe(false);
+    // Empty and whitespace-only strings don't count as QR content.
+    expect(isQrisInvoice({ qr_content: "", qris_content: " " })).toBe(false);
   });
 });
 
 describe("QrisCard", () => {
-  it("renders an inline SVG QR when qr_content is present", () => {
+  it("renders an accessible inline SVG QR when QRIS content is present", () => {
     const html = renderToStaticMarkup(<QrisCard qrContent={FAKE_QRIS} />);
     expect(html).toContain("<svg");
+    expect(html).toContain('role="img"');
+    expect(html).toContain('aria-label="Kode QRIS untuk pembayaran"');
     expect(html).toContain('class="ba-qr-card"');
     expect(html).toContain('class="ba-qr-label"');
     expect(html).toContain("QRIS");
@@ -81,7 +115,17 @@ describe("QrisCard", () => {
     );
     expect(html).not.toContain("<svg");
     expect(html).toContain('src="https://cdn.example.com/qr.png"');
-    expect(html).toContain('alt="QRIS"');
+    expect(html).toContain('alt="Kode QRIS untuk pembayaran"');
+    expect(html).toContain('width="220"');
+    expect(html).toContain('height="220"');
     expect(html).toContain("ba-qr-img");
+  });
+
+  it("renders a safe explicit fallback instead of an empty image source", () => {
+    const html = renderToStaticMarkup(<QrisCard qrContent={null} qrImageUrl={null} />);
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain('src=""');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Kode QRIS tidak tersedia");
   });
 });

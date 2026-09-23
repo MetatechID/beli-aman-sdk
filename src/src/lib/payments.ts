@@ -64,14 +64,47 @@ export function getMethods(provider: PaymentProvider | undefined | null): Paymen
 export interface QrisInvoiceLike {
   invoice_url?: string | null;
   qr_content?: string | null;
+  qris_content?: string | null;
   qr_image_url?: string | null;
+  qris_image_url?: string | null;
 }
 
-/** True when the invoice carries an inline QRIS payload (qr_content) or a
- *  pre-rendered QR image (qr_image_url) — i.e. the buyer pays by scanning a
- *  QR in-page instead of the gateway's hosted-checkout iframe (Dipay). */
+/** Resolve QR fields from either the current BAP (`qris_*`) names or the
+ *  legacy SDK (`qr_*`) names while both response shapes are in circulation. */
+export function getQrisPayment(inv: QrisInvoiceLike | null | undefined): {
+  content: string | null;
+  imageUrl: string | null;
+} {
+  return {
+    content: firstNonEmptyString(inv?.qris_content, inv?.qr_content),
+    imageUrl: firstNonEmptyString(inv?.qris_image_url, inv?.qr_image_url),
+  };
+}
+
+/** True when the invoice carries an inline QRIS payload or pre-rendered QR
+ *  image — i.e. the buyer pays by scanning in-page rather than through a
+ *  gateway-hosted checkout. */
 export function isQrisInvoice(inv: QrisInvoiceLike | null | undefined): boolean {
-  return !!inv && !!(inv.qr_content || inv.qr_image_url);
+  const { content, imageUrl } = getQrisPayment(inv);
+  return Boolean(content || imageUrl);
+}
+
+/** True for invoice URLs whose path is an obvious QR/image asset rather than
+ *  a hosted checkout page. Query parameters are intentionally ignored. */
+export function isImageUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    return /\.(?:png|jpe?g|webp|svg)$/i.test(new URL(value).pathname);
+  } catch {
+    return /\.(?:png|jpe?g|webp|svg)(?:[?#]|$)/i.test(value);
+  }
+}
+
+function firstNonEmptyString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
 }
 
 // Development-time self-check. Run via `node --import tsx ...`.

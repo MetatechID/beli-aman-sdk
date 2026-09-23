@@ -1,6 +1,8 @@
 // All Bahasa-Indonesia copy strings used by the SDK live here.
 // Keep verb-first ("Bayar Aman", not "Pembayaran Aman").
 
+import { PROVIDER_LABEL, type PaymentProvider } from "./payments";
+
 export const t = {
   cta: {
     beliAman: "Bayar Aman",
@@ -68,11 +70,20 @@ export const t = {
     vaInstruction:
       "Transfer ke nomor VA di bawah ini dalam 24 jam. Pembayaran otomatis terkonfirmasi.",
     qrisInstruction: "Scan dengan aplikasi pembayaran apa pun (GoPay/OVO/DANA/etc).",
+    qrisImageAlt: "Kode QRIS untuk pembayaran",
+    qrisUnavailable: "Kode QRIS tidak tersedia. Minta tautan pembayaran baru.",
+    invoiceUnavailable: "Halaman pembayaran belum tersedia. Coba lagi beberapa saat.",
     ewalletInstruction:
       "Buka aplikasi e-wallet Anda, lalu scan QR di bawah atau klik 'Buka di aplikasi'.",
     retailInstruction:
       "Tunjukkan kode pembayaran ini di kasir Alfamart atau Indomaret terdekat.",
     cardSecure: "Pembayaran kartu diamankan oleh Xendit (PCI-DSS compliant).",
+    processedBy: (provider: PaymentProvider) =>
+      `Pembayaran diproses oleh ${PROVIDER_LABEL[provider]} dan ditahan di escrow Beli Aman.`,
+    brandLine: (provider: PaymentProvider) =>
+      `⬣ Beli Aman × ${PROVIDER_LABEL[provider]}`,
+    iframeTitle: (provider: PaymentProvider) =>
+      `Beli Aman × ${PROVIDER_LABEL[provider]}`,
   },
   error: {
     signInFailed: "Gagal masuk. Coba lagi.",
@@ -86,4 +97,8 @@ export const t = {
 
 export function formatIDR(value: number): string {
   return "Rp " + value.toLocaleString("id-ID");
+}
+
+export function defaultProvider(provider: PaymentProvider | null | undefined): PaymentProvider {
+  return provider ?? "xendit";
 }

@@ -12,10 +12,13 @@ export type FlowStep =
   | "done"
   | "error";
 
+import type { PaymentProvider } from "./payments";
+
 export interface FlowState {
   step: FlowStep;
   brandSlug: string;
   items: { sku: string; qty: number }[];
+  paymentProvider?: PaymentProvider;
   orderId?: string;
   resumeUrl?: string;
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBeliAman } from "../BeliAmanProvider";
 import { api, type ShippingRate } from "../lib/api";
 import { formatIDR, t } from "../lib/i18n";
+import { getMethods, PROVIDER_LABEL } from "../lib/payments";
 
 interface CartLine {
   sku: string;
@@ -25,6 +26,7 @@ export function StepCartReview() {
     brandSlug,
     items,
     defaultAddress,
+    paymentProvider,
   } = useBeliAman();
 
   const [previewLines, setPreviewLines] = useState<CartLine[]>([]);
@@ -306,14 +308,20 @@ export function StepCartReview() {
 
       <section className="ba-section">
         <h3 className="ba-h3">{t.field.paymentMethod}</h3>
-        <div className="ba-pm-card">
-          <div className="ba-pm-icon">🏦</div>
-          <div className="ba-pm-info">
-            <div className="ba-pm-label">BCA Virtual Account</div>
-            <div className="ba-muted">Dilindungi escrow Beli Aman</div>
-          </div>
-          <span className="ba-pill ba-pill-success">Terpilih</span>
+        <div className="ba-pm-list" style={{ display: "grid", gap: 6 }}>
+          {getMethods(paymentProvider).map((method) => (
+            <div className="ba-pm-card" key={method.key}>
+              <div className="ba-pm-icon" aria-hidden="true">{method.icon}</div>
+              <div className="ba-pm-info">
+                <div className="ba-pm-label">{method.label}</div>
+                <div className="ba-muted">via {PROVIDER_LABEL[paymentProvider ?? "xendit"]}</div>
+              </div>
+            </div>
+          ))}
         </div>
+        <p className="ba-muted" style={{ fontSize: 12, marginTop: 6 }}>
+          Pilihan bank / e-wallet tersedia di halaman pembayaran aman.
+        </p>
       </section>
 
       <section className="ba-section ba-totals">

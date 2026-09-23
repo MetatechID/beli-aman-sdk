@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { useBeliAman } from "../BeliAmanProvider";
-import { formatIDR, t } from "../lib/i18n";
-import { isQrisInvoice } from "../lib/payments";
+import { defaultProvider, formatIDR, t } from "../lib/i18n";
+import { getQrisPayment, isImageUrl, isQrisInvoice } from "../lib/payments";
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -27,16 +27,26 @@ export function QrisCard({
     <div className="ba-qr-card">
       <div className="ba-qr-wrap">
         {qrContent ? (
-          <QRCodeSVG value={qrContent} size={220} />
-        ) : (
-          <img
-            src={qrImageUrl ?? ""}
-            alt="QRIS"
-            className="ba-qr-img"
-            style={{ width: 220, height: 220 }}
+          <QRCodeSVG
+            value={qrContent}
+            size={220}
+            role="img"
+            aria-label={t.payment.qrisImageAlt}
           />
+        ) : qrImageUrl ? (
+          <img
+            src={qrImageUrl}
+            alt={t.payment.qrisImageAlt}
+            className="ba-qr-img"
+            width={220}
+            height={220}
+          />
+        ) : (
+          <p className="ba-error-inline ba-center" role="alert">
+            {t.payment.qrisUnavailable}
+          </p>
         )}
-        <span className="ba-qr-label">QRIS</span>
+        {qrContent || qrImageUrl ? <span className="ba-qr-label">QRIS</span> : null}
       </div>
       <p className="ba-muted ba-center" style={{ margin: 0 }}>
         {t.payment.qrisInstruction}
@@ -46,13 +56,20 @@ export function QrisCard({
 }
 
 export function StepPayment() {
-  const { order, invoice, refreshOrder, goTo } = useBeliAman();
+  const { order, invoice, refreshOrder, goTo, paymentProvider } = useBeliAman();
   const total = order?.total_idr ?? 0;
-  const invoiceUrl = invoice?.invoice_url;
+  const invoiceUrl = invoice?.invoice_url?.trim() || null;
   const expiresAt = invoice?.expires_at;
-  const qrContent = invoice?.qr_content;
-  const qrImageUrl = invoice?.qr_image_url;
-  const hasQr = isQrisInvoice(invoice);
+  const normalizedQris = getQrisPayment(invoice);
+  const invoiceUrlIsImage = isImageUrl(invoiceUrl);
+  const qrContent = normalizedQris.content;
+  const qrImageUrl = normalizedQris.imageUrl ?? (invoiceUrlIsImage ? invoiceUrl : null);
+  const hasQr = isQrisInvoice(invoice) || invoiceUrlIsImage;
+  const isQrisProvider = paymentProvider === "dipay";
+  // Dipay's signed development mock is a real hosted checkout page and carries
+  // no qris_* fields. Keep that URL usable, but never treat an obvious image
+  // asset (including a PNG supplied only as invoice_url) as hosted checkout.
+  const shouldRenderQris = hasQr || (isQrisProvider && !invoiceUrl);
 
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   useEffect(() => {
@@ -76,9 +93,9 @@ export function StepPayment() {
   // Runs whenever there is anything to pay against: a hosted-checkout URL
   // (Xendit/OY/Sento) or an inline QRIS payload/image (Dipay).
   const pollingRef = useRef(false);
-  const hasPaymentTarget = Boolean(invoiceUrl || qrImageUrl || qrContent);
+  const hasInvoice = Boolean(invoice);
   useEffect(() => {
-    if (!hasPaymentTarget || pollingRef.current) return;
+    if (!hasInvoice || pollingRef.current) return;
     pollingRef.current = true;
     let stopped = false;
     const tick = async () => {
@@ -96,11 +113,11 @@ export function StepPayment() {
       stopped = true;
       pollingRef.current = false;
     };
-  }, [hasPaymentTarget, invoiceUrl, qrImageUrl, qrContent, refreshOrder, goTo]);
+  }, [hasInvoice, refreshOrder, goTo]);
 
-  // No hosted page AND no QR → nothing to render yet (invoice still being
-  // minted server-side).
-  if (!hasPaymentTarget) {
+  // No invoice object yet means the server is still minting the payment.
+  // A present but malformed invoice is handled explicitly below.
+  if (!invoice) {
     return (
       <div className="ba-step ba-step-payment">
         <p className="ba-muted ba-center">Menyiapkan halaman pembayaran...</p>
@@ -112,7 +129,7 @@ export function StepPayment() {
     <div className="ba-step ba-step-payment">
       <div className="ba-xendit-bar">
         <div className="ba-xendit-bar-left">
-          <span className="ba-xendit-logo">⬣ Beli Aman × Xendit</span>
+          <span className="ba-xendit-logo">{t.payment.brandLine(defaultProvider(paymentProvider))}</span>
           {timer ? (
             <>
               <span className="ba-muted">{t.field.expiresIn}</span>
@@ -126,20 +143,24 @@ export function StepPayment() {
         </div>
       </div>
 
-      {hasQr ? (
+      {shouldRenderQris ? (
         <QrisCard qrContent={qrContent} qrImageUrl={qrImageUrl} />
-      ) : (
+      ) : invoiceUrl ? (
         <div className="ba-xendit-frame-wrap">
           <iframe
             className="ba-xendit-frame"
             src={invoiceUrl}
-            title="Beli Aman × Xendit"
+            title={t.payment.iframeTitle(defaultProvider(paymentProvider))}
             allow="payment"
           />
         </div>
+      ) : (
+        <div className="ba-error-inline ba-center" role="alert">
+          {t.payment.invoiceUnavailable}
+        </div>
       )}
 
-      {invoiceUrl ? (
+      {invoiceUrl && !shouldRenderQris ? (
         <div className="ba-pay-actions">
           <a
             className="ba-btn-secondary ba-cta-fw"

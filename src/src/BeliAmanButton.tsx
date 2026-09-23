@@ -1,10 +1,13 @@
 "use client";
 
 import { useBeliAman, type CartItemInput } from "./BeliAmanProvider";
+import type { PaymentProvider } from "./lib/payments";
 
 export interface BeliAmanButtonProps {
   brandSlug: string;
   items: CartItemInput[];
+  /** Payment gateway selected by the brand/BAP. */
+  paymentProvider?: PaymentProvider;
   className?: string;
   fullWidth?: boolean;
   variant?: "primary" | "secondary";
@@ -13,6 +16,7 @@ export interface BeliAmanButtonProps {
 export function BeliAmanButton({
   brandSlug,
   items,
+  paymentProvider,
   className,
   fullWidth = false,
   variant = "primary",
@@ -30,7 +34,7 @@ export function BeliAmanButton({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => open({ brandSlug, items })}
+      onClick={() => open({ brandSlug, items, paymentProvider })}
     >
       <span className="ba-cta-shield" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
