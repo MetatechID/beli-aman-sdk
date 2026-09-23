@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   createContext,
   useCallback,
@@ -23,6 +24,7 @@ import {
   type FirebaseConfig,
 } from "./lib/firebase";
 import { api, type ApiOptions, type InvoiceResponse, type OrderResponse, type ShippingChoice } from "./lib/api";
+import { getQrisPayment, type PaymentProvider } from "./lib/payments";
 import {
   clearFlow,
   readFlow,
@@ -67,6 +69,7 @@ export interface BeliAmanConfig {
 interface OpenArgs {
   brandSlug: string;
   items: CartItemInput[];
+  paymentProvider?: PaymentProvider;
 }
 
 interface BeliAmanContextValue {
@@ -86,8 +89,10 @@ interface BeliAmanContextValue {
   // current cart context (set when open() is called)
   brandSlug: string;
   items: CartItemInput[];
+  /** Payment gateway for the current flow, preserved through restoration. */
+  paymentProvider: PaymentProvider | null;
 
-  // active Xendit invoice — set after proceedToPayment(); drives StepPayment.
+  // active payment invoice — set after proceedToPayment(); drives StepPayment.
   invoice: InvoiceResponse | null;
 
   // navigation
@@ -167,6 +172,7 @@ export function BeliAmanProvider({
   const [step, setStep] = useState<FlowStep>("sign-in");
   const [brandSlug, setBrandSlug] = useState(config.brand.slug);
   const [items, setItems] = useState<CartItemInput[]>([]);
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider | null>(null);
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -206,20 +212,72 @@ export function BeliAmanProvider({
 
     setBrandSlug(saved.brandSlug);
     setItems(saved.items);
-    setStep(saved.step);
-    setIsOpen(true);
-    // Reconcile order state from server
-    if (saved.orderId) {
-      api
+    setPaymentProvider(saved.paymentProvider ?? null);
+    if (!saved.orderId) {
+      clearFlow();
+      return;
+    }
+    // Reconcile order state from the server before reopening the flow. This
+    // avoids showing a stale payment modal with no usable invoice.
+    api
         .getOrder(apiOptsRef.current!, saved.orderId)
         .then((o) => {
           setOrder(o);
-          if (o.state === "ESCROW_HELD") setStep("done");
+          const terminal =
+            o.state === "ESCROW_RELEASED" ||
+            o.state === "REFUNDED" ||
+            o.state === "DISPUTED";
+          if (terminal) {
+            setStep(o.state === "ESCROW_RELEASED" ? "done" : "error");
+            clearFlow();
+            return;
+          }
+          const restoredStep = o.state === "ESCROW_HELD" ? "done" : saved.step;
+          // Restore the invoice from the order's payment snapshot so
+          // StepPayment shows the gateway iframe / QRIS card instead of the
+          // "Menyiapkan halaman pembayaran…" placeholder after a refresh.
+          const snap = (
+            o as {
+              payment_method_snapshot?: {
+                payment_provider?: string | null;
+                invoice_url?: string | null;
+                invoice_id?: string | null;
+                qr_content?: string | null;
+                qris_content?: string | null;
+                qr_image_url?: string | null;
+                qris_image_url?: string | null;
+              };
+            }
+          ).payment_method_snapshot;
+          const restoredProvider = asPaymentProvider(snap?.payment_provider);
+          if (restoredProvider) setPaymentProvider(restoredProvider);
+          if (
+            snap?.invoice_url ||
+            snap?.qr_content ||
+            snap?.qris_content ||
+            snap?.qr_image_url ||
+            snap?.qris_image_url
+          ) {
+            setInvoice(
+              normalizeInvoice({
+                order_id: o.id,
+                state: o.state,
+                provider: restoredProvider,
+                invoice_id: snap.invoice_id ?? "",
+                invoice_url: snap.invoice_url ?? "",
+                qr_content: snap.qr_content ?? null,
+                qris_content: snap.qris_content ?? null,
+                qr_image_url: snap.qr_image_url ?? null,
+                qris_image_url: snap.qris_image_url ?? null,
+              }),
+            );
+          }
+          setStep(restoredStep);
+          setIsOpen(true);
         })
         .catch(() => {
-          /* stale order — ignore */
+          clearFlow();
         });
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -246,17 +304,20 @@ export function BeliAmanProvider({
       step,
       brandSlug,
       items,
+      paymentProvider: paymentProvider ?? undefined,
       orderId: order?.id,
       resumeUrl: typeof window !== "undefined" ? window.location.href : undefined,
     };
     writeFlow(flow);
-  }, [isOpen, step, brandSlug, items, order]);
+  }, [isOpen, step, brandSlug, items, paymentProvider, order]);
 
   const open = useCallback(
     (args: OpenArgs) => {
       setBrandSlug(args.brandSlug);
       setItems(args.items);
+      setPaymentProvider(args.paymentProvider ?? null);
       setOrder(null);
+      setInvoice(null);
       setError(null);
       setStep(signedIn ? "cart-review" : "sign-in");
       setIsOpen(true);
@@ -271,7 +332,9 @@ export function BeliAmanProvider({
   const resetFlow = useCallback(() => {
     setIsOpen(false);
     setOrder(null);
+    setInvoice(null);
     setItems([]);
+    setPaymentProvider(null);
     setStep("sign-in");
     setError(null);
     clearFlow();
@@ -368,7 +431,9 @@ export function BeliAmanProvider({
       const reviewed = await api.advanceReview(apiOpts, order.id);
       setOrder(reviewed);
       const inv = await api.createInvoice(apiOpts, reviewed.id);
-      setInvoice(inv);
+      const invoiceProvider = asPaymentProvider(inv.provider);
+      if (invoiceProvider) setPaymentProvider(invoiceProvider);
+      setInvoice(normalizeInvoice(inv));
       setStep("payment");
     } catch (e: any) {
       setError(e?.message || "Could not start payment");
@@ -423,6 +488,7 @@ export function BeliAmanProvider({
     order,
     brandSlug,
     items,
+    paymentProvider,
     invoice,
     open,
     close,
@@ -446,7 +512,7 @@ export function BeliAmanProvider({
     <Ctx.Provider value={value}>
       {children}
       {isOpen ? (
-        <Shell onClose={close} title={titleForStep(step)}>
+        <Shell onClose={close} title={titleForStep(step, paymentProvider)}>
           {error ? (
             <div className="ba-error" role="alert">
               {error}
@@ -467,7 +533,29 @@ export function BeliAmanProvider({
   );
 }
 
-function titleForStep(s: FlowStep): string {
+function normalizeInvoice(invoice: InvoiceResponse): InvoiceResponse {
+  const { content: qrisContent, imageUrl: qrisImageUrl } = getQrisPayment(invoice);
+  return {
+    ...invoice,
+    qr_content: invoice.qr_content ?? qrisContent,
+    qris_content: qrisContent,
+    qr_image_url: invoice.qr_image_url ?? qrisImageUrl,
+    qris_image_url: qrisImageUrl,
+  };
+}
+
+function asPaymentProvider(value: unknown): PaymentProvider | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.toLowerCase();
+  return normalized === "xendit" ||
+    normalized === "oy" ||
+    normalized === "sento" ||
+    normalized === "dipay"
+    ? normalized
+    : null;
+}
+
+export function titleForStep(s: FlowStep, paymentProvider?: PaymentProvider | null): string {
   switch (s) {
     case "sign-in":
       return "Beli Aman";
@@ -476,12 +564,25 @@ function titleForStep(s: FlowStep): string {
     case "confirm":
       return "Konfirmasi Pembayaran";
     case "payment":
-      return "Pilih Metode Pembayaran";
+      return `Bayar via ${paymentProviderLabel(paymentProvider)}`;
     case "processing":
       return "Memproses...";
     case "done":
       return "Dana Anda Aman";
     default:
       return "Beli Aman";
+  }
+}
+
+function paymentProviderLabel(provider: PaymentProvider | null | undefined): string {
+  switch (provider) {
+    case "oy":
+      return "OY Indonesia";
+    case "sento":
+      return "Sento";
+    case "dipay":
+      return "Dipay";
+    default:
+      return "Xendit";
   }
 }

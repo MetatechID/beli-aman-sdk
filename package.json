@@ -51,8 +51,10 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "dependencies": {},
-  "//dependencies": "Will add @jaringan-dagang/beckn-protocol ^0.1.0 once that package publishes to npm (migration Step 2 in jaringan-dagang-protocol repo). Empty deps lets pnpm install bootstrap on day 1.",
+  "dependencies": {
+    "qrcode.react": "^4.2.0"
+  },
+  "//dependencies": "qrcode.react powers the inline QRIS payment card (Dipay); tsup bundles it — keep it OUT of the externals list. Will add @jaringan-dagang/beckn-protocol ^0.1.0 once that package publishes to npm (migration Step 2 in jaringan-dagang-protocol repo).",
   "devDependencies": {
     "@changesets/cli": "^2.27.7",
     "@playwright/test": "^1.48.0",

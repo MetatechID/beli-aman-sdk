@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 import { useBeliAman } from "../BeliAmanProvider";
-import { formatIDR, t } from "../lib/i18n";
+import { defaultProvider, formatIDR, t } from "../lib/i18n";
 
 export function StepConfirm() {
-  const { order, proceedToPayment } = useBeliAman();
+  const { order, proceedToPayment, paymentProvider } = useBeliAman();
   const [busy, setBusy] = useState(false);
 
   const total = order?.total_idr ?? 0;
@@ -59,7 +59,7 @@ export function StepConfirm() {
       </button>
 
       <p className="ba-fineprint ba-center">
-        Pembayaran diproses oleh Xendit dan ditahan di escrow Beli Aman.
+        {t.payment.processedBy(defaultProvider(paymentProvider))}
       </p>
     </div>
   );

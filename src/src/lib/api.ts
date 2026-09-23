@@ -104,9 +104,19 @@ export interface OrderResponse {
 export interface InvoiceResponse {
   order_id: string;
   state: string;
+  /** Payment gateway used to create this invoice. */
+  provider?: string | null;
   invoice_id: string;
   invoice_url: string;
   expires_at?: string | null;
+  /** Dipay/QRIS: raw QRIS payload to render as a QR code in-page. */
+  qr_content?: string | null;
+  /** Current BAP field name for the raw QRIS payload. */
+  qris_content?: string | null;
+  /** Dipay/QRIS: pre-rendered QR image URL (when the BAP hosts the image). */
+  qr_image_url?: string | null;
+  /** Current BAP field name for the pre-rendered QR image URL. */
+  qris_image_url?: string | null;
 }
 
 export interface OtpRequestBody {
