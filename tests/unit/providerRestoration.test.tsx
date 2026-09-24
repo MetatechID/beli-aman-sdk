@@ -17,6 +17,10 @@ const firebaseMocks = vi.hoisted(() => ({
 }));
 
 const apiMocks = vi.hoisted(() => ({
+  createOrder: vi.fn(),
+  advanceAuth: vi.fn(),
+  advanceReview: vi.fn(),
+  createInvoice: vi.fn(),
   getOrder: vi.fn(),
 }));
 
@@ -30,6 +34,9 @@ vi.mock("../../src/src/shells/MobileSheet", () => ({
     <div data-testid="shell" data-title={title}>{children}</div>
   ),
 }));
+vi.mock("../../src/src/steps/StepSignIn", () => ({ StepSignIn: () => <div>sign-in</div> }));
+vi.mock("../../src/src/steps/StepCartReview", () => ({ StepCartReview: () => <div>cart-review</div> }));
+vi.mock("../../src/src/steps/StepConfirm", () => ({ StepConfirm: () => <div>confirm</div> }));
 vi.mock("../../src/src/steps/StepPayment", () => ({ StepPayment: () => <div>payment</div> }));
 
 vi.mock("../../src/src/lib/firebase", () => firebaseMocks);
@@ -39,6 +46,10 @@ vi.mock("../../src/src/lib/api", async (importOriginal) => {
     ...actual,
     api: {
       ...actual.api,
+      createOrder: apiMocks.createOrder,
+      advanceAuth: apiMocks.advanceAuth,
+      advanceReview: apiMocks.advanceReview,
+      createInvoice: apiMocks.createInvoice,
       getOrder: apiMocks.getOrder,
     },
   };
@@ -95,6 +106,33 @@ const ORDER: OrderResponse = {
     qris_content: "00020101021126610014COM.GO-JEK.WWW",
     qris_image_url: "https://cdn.example.com/dip-1.png",
   },
+};
+
+const CREATED_ORDER: OrderResponse = {
+  ...ORDER,
+  id: "order-retry",
+  state: "DRAFT",
+  payment_method_snapshot: undefined,
+};
+
+const AUTHED_ORDER: OrderResponse = {
+  ...CREATED_ORDER,
+  state: "AUTHED",
+};
+
+const REVIEWED_ORDER: OrderResponse = {
+  ...CREATED_ORDER,
+  state: "CART_REVIEWED",
+};
+
+const DIPAY_INVOICE = {
+  order_id: REVIEWED_ORDER.id,
+  state: "PAYMENT_PENDING",
+  provider: "dipay",
+  invoice_id: "dip-retry",
+  invoice_url: "https://cdn.example.com/dip-retry.png",
+  qris_content: "00020101021226610014ID.CO.DIPAY.WWW",
+  qris_image_url: "https://cdn.example.com/dip-retry.png",
 };
 
 function ContextProbe({ onValue }: { onValue: (value: ReturnType<typeof useBeliAman>) => void }) {
@@ -174,6 +212,63 @@ describe("BeliAmanProvider payment restoration", () => {
       qr_content: "00020101021126610014COM.GO-JEK.WWW",
       qris_image_url: "https://cdn.example.com/dip-1.png",
       qr_image_url: "https://cdn.example.com/dip-1.png",
+    });
+
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  it("retries invoice creation for a CART_REVIEWED order without reviewing it again", async () => {
+    apiMocks.createOrder.mockResolvedValue(CREATED_ORDER);
+    apiMocks.advanceAuth.mockResolvedValue(AUTHED_ORDER);
+    apiMocks.advanceReview.mockResolvedValue(REVIEWED_ORDER);
+    apiMocks.createInvoice
+      .mockRejectedValueOnce(new Error("invoice unavailable"))
+      .mockResolvedValueOnce(DIPAY_INVOICE);
+    let latest: ReturnType<typeof useBeliAman> | undefined;
+    const onValue = vi.fn((value: ReturnType<typeof useBeliAman>) => {
+      latest = value;
+    });
+
+    const { root, container } = renderProvider(onValue);
+    act(() => {
+      latest?.open({
+        brandSlug: "brand",
+        items: [{ sku: "SKU-1", qty: 1 }],
+        paymentProvider: "dipay",
+      });
+    });
+    await act(async () => {
+      await latest?.submitCartReview({ addressInline: { line1: "Jalan Aman 1" } });
+    });
+
+    await act(async () => {
+      await latest?.proceedToPayment();
+    });
+
+    expect(apiMocks.advanceReview).toHaveBeenCalledTimes(1);
+    expect(apiMocks.advanceReview).toHaveBeenCalledWith(expect.any(Object), CREATED_ORDER.id);
+    expect(apiMocks.createInvoice).toHaveBeenNthCalledWith(1, expect.any(Object), CREATED_ORDER.id);
+    expect(latest?.order).toEqual(REVIEWED_ORDER);
+    expect(latest?.step).toBe("confirm");
+
+    await act(async () => {
+      await latest?.proceedToPayment();
+    });
+
+    expect(apiMocks.advanceReview).toHaveBeenCalledTimes(1);
+    expect(apiMocks.createInvoice).toHaveBeenCalledTimes(2);
+    expect(apiMocks.createInvoice).toHaveBeenNthCalledWith(2, expect.any(Object), CREATED_ORDER.id);
+    expect(latest?.step).toBe("payment");
+    expect(latest?.paymentProvider).toBe("dipay");
+    expect(latest?.invoice).toMatchObject({
+      order_id: CREATED_ORDER.id,
+      provider: "dipay",
+      invoice_id: "dip-retry",
+      qris_content: "00020101021226610014ID.CO.DIPAY.WWW",
+      qr_content: "00020101021226610014ID.CO.DIPAY.WWW",
+      qris_image_url: "https://cdn.example.com/dip-retry.png",
+      qr_image_url: "https://cdn.example.com/dip-retry.png",
     });
 
     act(() => root.unmount());

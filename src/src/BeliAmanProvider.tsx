@@ -428,9 +428,12 @@ export function BeliAmanProvider({
   const proceedToPayment = useCallback(async () => {
     if (!order) return;
     try {
-      const reviewed = await api.advanceReview(apiOpts, order.id);
-      setOrder(reviewed);
-      const inv = await api.createInvoice(apiOpts, reviewed.id);
+      let invoiceOrder = order;
+      if (order.state === "AUTHED") {
+        invoiceOrder = await api.advanceReview(apiOpts, order.id);
+        setOrder(invoiceOrder);
+      }
+      const inv = await api.createInvoice(apiOpts, invoiceOrder.id);
       const invoiceProvider = asPaymentProvider(inv.provider);
       if (invoiceProvider) setPaymentProvider(invoiceProvider);
       setInvoice(normalizeInvoice(inv));
