@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useBeliAman } from "../BeliAmanProvider";
 import { api, type ShippingRate } from "../lib/api";
@@ -49,7 +49,9 @@ export function StepCartReview() {
   const [ratesLoading, setRatesLoading] = useState(false);
   const [ratesError, setRatesError] = useState<string | null>(null);
   const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
-  const rateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ratesContext, setRatesContext] = useState<string | null>(null);
+  const shippingContext = JSON.stringify([apiOpts.bapUrl, brandSlug, items, postalCode.trim()]);
+  const currentRate = ratesContext === shippingContext ? selectedRate : null;
 
   useEffect(() => {
     setRecipientName(displayName || "");
@@ -113,44 +115,43 @@ export function StepCartReview() {
   }, [apiOpts.bapUrl, brandSlug, items]);
 
   // ----- Fetch courier rates whenever postal code or cart changes -----
-  const fetchRates = useCallback(async () => {
-    if (!brandSlug || items.length === 0) return;
-    if (!/^\d{5}$/.test(postalCode.trim())) {
-      setRates([]);
-      setSelectedRate(null);
+  useEffect(() => {
+    let cancelled = false;
+    setRatesContext(null);
+    setRates([]);
+    setRatesError(null);
+    if (!brandSlug || items.length === 0 || !/^\d{5}$/.test(postalCode.trim())) {
+      setRatesLoading(false);
       return;
     }
     setRatesLoading(true);
-    setRatesError(null);
-    try {
-      const { data } = await api.shippingRates(apiOpts, {
-        brand_slug: brandSlug,
-        destination_postal_code: postalCode.trim(),
-        items,
-      });
-      setRates(data);
-      setSelectedRate((prev) => {
-        if (prev && data.some((r) => r.courier_code === prev.courier_code && r.courier_service_code === prev.courier_service_code)) {
-          return prev;
-        }
-        return data.length > 0 ? data[0] : null;
-      });
-    } catch (e: any) {
-      setRatesError(e?.message || "Gagal memuat ongkir");
-      setRates([]);
-      setSelectedRate(null);
-    } finally {
-      setRatesLoading(false);
-    }
-  }, [apiOpts, brandSlug, items, postalCode]);
-
-  useEffect(() => {
-    if (rateDebounceRef.current) clearTimeout(rateDebounceRef.current);
-    rateDebounceRef.current = setTimeout(fetchRates, 350);
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.shippingRates(apiOpts, {
+          brand_slug: brandSlug,
+          destination_postal_code: postalCode.trim(),
+          items,
+        });
+        if (cancelled) return;
+        setRates(data);
+        setSelectedRate((prev) =>
+          data.find((r) => r.courier_code === prev?.courier_code && r.courier_service_code === prev?.courier_service_code)
+          ?? data[0] ?? null,
+        );
+        setRatesContext(shippingContext);
+      } catch (e: any) {
+        if (cancelled) return;
+        setRatesError(e?.message || "Gagal memuat ongkir");
+        setSelectedRate(null);
+      } finally {
+        if (!cancelled) setRatesLoading(false);
+      }
+    }, 350);
     return () => {
-      if (rateDebounceRef.current) clearTimeout(rateDebounceRef.current);
+      cancelled = true;
+      clearTimeout(timer);
     };
-  }, [fetchRates]);
+  }, [apiOpts, brandSlug, items, postalCode, shippingContext]);
 
   const handleContinue = async () => {
     setErr(null);
@@ -158,7 +159,7 @@ export function StepCartReview() {
       setErr("Lengkapi nama, nomor telepon, dan alamat.");
       return;
     }
-    if (!selectedRate) {
+    if (!currentRate || ratesLoading) {
       setErr("Pilih kurir pengiriman terlebih dahulu.");
       return;
     }
@@ -174,11 +175,12 @@ export function StepCartReview() {
           postal_code: postalCode,
         },
         shipping: {
-          courier_code: selectedRate.courier_code,
-          courier_service_code: selectedRate.courier_service_code,
-          courier_service_name: selectedRate.courier_service_name,
-          price_idr: selectedRate.price,
-          duration: selectedRate.duration,
+          destination_postal_code: postalCode.trim(),
+          courier_code: currentRate.courier_code,
+          courier_service_code: currentRate.courier_service_code,
+          courier_service_name: currentRate.courier_service_name,
+          price_idr: currentRate.price,
+          duration: currentRate.duration,
         },
       });
     } catch (e: any) {
@@ -266,8 +268,8 @@ export function StepCartReview() {
             {rates.map((r) => {
               const id = `${r.courier_code}:${r.courier_service_code}`;
               const isSel =
-                selectedRate?.courier_code === r.courier_code &&
-                selectedRate?.courier_service_code === r.courier_service_code;
+                currentRate?.courier_code === r.courier_code &&
+                currentRate?.courier_service_code === r.courier_service_code;
               return (
                 <button
                   key={id}
@@ -331,17 +333,17 @@ export function StepCartReview() {
         </div>
         <div className="ba-row">
           <span>{t.field.shipping}</span>
-          <strong>{formatIDR(selectedRate?.price ?? 0)}</strong>
+          <strong>{formatIDR(currentRate?.price ?? 0)}</strong>
         </div>
         <div className="ba-row ba-row-total">
           <span>{t.field.total}</span>
-          <strong className="ba-total-amount">{formatIDR(previewTotal + (selectedRate?.price ?? 0))}</strong>
+          <strong className="ba-total-amount">{formatIDR(previewTotal + (currentRate?.price ?? 0))}</strong>
         </div>
       </section>
 
       {err ? <p className="ba-error-inline">{err}</p> : null}
 
-      <button className="ba-btn-primary ba-cta-fw" onClick={handleContinue} disabled={busy}>
+      <button className="ba-btn-primary ba-cta-fw" onClick={handleContinue} disabled={busy || ratesLoading || !currentRate}>
         {busy ? "Memproses..." : t.cta.continueToPayment}
       </button>
     </div>
