@@ -1,0 +1,7 @@
+title = "SDK secret scanning policy"
+
+# Built-in rules are fixed by the digest-pinned scanner image.
+[extend]
+useDefault = true
+
+# No repository-wide exclusions or historical baseline. Exceptions require review.
