@@ -31,7 +31,7 @@ confirm).
   released, with the customer-side "I got my package" confirm button.
 
 It speaks the Beckn protocol over the
-[`jaringan-dagang-protocol`](https://github.com/MetatechID/jaringan-dagang-protocol)
+[OITO protocol](https://github.com/MetatechID/jaringan-dagang-protocol)
 network — so any BPP on that network plugs into your storefront
 without per-merchant integration work.
 
