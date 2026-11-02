@@ -239,7 +239,7 @@ describe("BeliAmanProvider payment restoration", () => {
       });
     });
     await act(async () => {
-      await latest?.submitCartReview({ addressInline: { line1: "Jalan Aman 1" } });
+      await latest?.submitCartReview({ addressInline: { line1: "Jalan Aman 1", postal_code: "12190" } });
     });
 
     await act(async () => {

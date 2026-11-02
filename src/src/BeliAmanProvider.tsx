@@ -410,12 +410,18 @@ export function BeliAmanProvider({
   const submitCartReview = useCallback(
     async ({ addressInline, shipping }: { addressInline: any; shipping?: ShippingChoice }) => {
       try {
+        const destinationPostalCode = typeof addressInline?.postal_code === "string"
+          ? addressInline.postal_code.trim() : "";
+        if (!/^[0-9]{5}$/.test(destinationPostalCode)) {
+          throw new Error("Kode pos harus terdiri dari 5 digit.");
+        }
         const created = await api.createOrder(apiOpts, {
           brand_slug: brandSlug,
+          destination_postal_code: destinationPostalCode,
           items,
           shipping,
         });
-        const authed = await api.advanceAuth(apiOpts, created.id, { address_inline: addressInline });
+        const authed = await api.advanceAuth(apiOpts, created.id, { address_inline: { ...addressInline, postal_code: destinationPostalCode } });
         setOrder(authed);
         setStep("confirm");
       } catch (e: any) {

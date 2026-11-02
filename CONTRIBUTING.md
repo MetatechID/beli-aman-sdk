@@ -31,6 +31,26 @@ pnpm build
 4. Open a PR. CI runs lint + tests + builds.
 5. On merge, changesets opens a Release PR; merging that publishes to npm.
 
+## Storefront-related commit identity
+
+All SDK changes affecting storefronts must be committed with both author and
+committer `adiwangsats <adiwangsatirtasentosa@gmail.com>`, as required by the
+storefront deployment team. This does not replace Vercel account authorization.
+Use command-scoped identity, never global Git configuration or history rewriting:
+
+```bash
+GIT_AUTHOR_NAME=adiwangsats \
+GIT_AUTHOR_EMAIL=adiwangsatirtasentosa@gmail.com \
+GIT_COMMITTER_NAME=adiwangsats \
+GIT_COMMITTER_EMAIL=adiwangsatirtasentosa@gmail.com \
+git commit -m "fix: forward checkout destination"
+git show -s --format='Author: %an <%ae>%nCommitter: %cn <%ce>' HEAD
+```
+
+Synchronize relevant canonical changes into the private storefront's vendored
+SDK, preserving its intentional extensions. Manual-only deployments must not use
+a Git push as their release mechanism; check linked Vercel auto-deploy behavior.
+
 ## What we look for
 
 - Tested. New components ship with a Storybook story + tests.

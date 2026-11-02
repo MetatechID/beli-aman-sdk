@@ -56,7 +56,6 @@ export async function call<T = any>(opts: ApiOptions, path: string, init: Reques
 // ---- Typed wrappers ----
 
 export interface ShippingChoice {
-  destination_postal_code: string;
   courier_code: string;
   courier_service_code?: string;
   courier_service_name?: string;
@@ -66,6 +65,7 @@ export interface ShippingChoice {
 
 export interface CreateOrderRequest {
   brand_slug: string;
+  destination_postal_code: string;
   items: { sku: string; qty: number }[];
   shipping?: ShippingChoice;
 }

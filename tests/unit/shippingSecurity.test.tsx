@@ -55,7 +55,8 @@ it("submits the destination bound to the displayed rate", async () => {
   expect(button().disabled).toBe(false);
   await act(async () => button().click());
   expect(mocks.context.submitCartReview).toHaveBeenCalledWith(expect.objectContaining({
-    shipping: expect.objectContaining({ destination_postal_code: "12190", price_idr: 12000 }),
+    addressInline: expect.objectContaining({ postal_code: "12190" }),
+    shipping: expect.objectContaining({ price_idr: 12000 }),
   }));
 });
 
@@ -70,7 +71,8 @@ it("invalidates immediately on address changes and replaces the old price for th
   await act(async () => next.resolve({ data: [rate(25000)] }));
   await act(async () => button().click());
   expect(mocks.context.submitCartReview).toHaveBeenCalledWith(expect.objectContaining({
-    shipping: expect.objectContaining({ destination_postal_code: "54321", price_idr: 25000 }),
+    addressInline: expect.objectContaining({ postal_code: "54321" }),
+    shipping: expect.objectContaining({ price_idr: 25000 }),
   }));
 });
 
@@ -84,7 +86,8 @@ it("ignores late responses for a previous destination", async () => {
   await act(async () => old.resolve({ data: [rate(1000)] }));
   await act(async () => button().click());
   expect(mocks.context.submitCartReview).toHaveBeenCalledWith(expect.objectContaining({
-    shipping: expect.objectContaining({ destination_postal_code: "54321", price_idr: 30000 }),
+    addressInline: expect.objectContaining({ postal_code: "54321" }),
+    shipping: expect.objectContaining({ price_idr: 30000 }),
   }));
 });
 

@@ -172,10 +172,9 @@ export function StepCartReview() {
           line1,
           kota,
           provinsi,
-          postal_code: postalCode,
+          postal_code: postalCode.trim(),
         },
         shipping: {
-          destination_postal_code: postalCode.trim(),
           courier_code: currentRate.courier_code,
           courier_service_code: currentRate.courier_service_code,
           courier_service_name: currentRate.courier_service_name,
