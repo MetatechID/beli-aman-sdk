@@ -22,7 +22,7 @@ pnpm build
 
 ## Making a change
 
-1. Branch from `main`.
+1. Work and push changes on `pre-main`, not `main`. Promotion to `main` requires an explicit user request.
 2. Make your change in the smallest possible diff.
 3. Add a changeset:
    ```bash
