@@ -1,0 +1,28 @@
+name: Shipping security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  shipping-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Isolated destination and stale-rate regressions
+        run: env -i PATH="$PATH" HOME="$HOME" pnpm exec vitest run --config vitest.shipping-security.config.ts
+      - run: pnpm typecheck
+      - run: pnpm build

@@ -65,6 +65,7 @@ export interface ShippingChoice {
 
 export interface CreateOrderRequest {
   brand_slug: string;
+  destination_postal_code: string;
   items: { sku: string; qty: number }[];
   shipping?: ShippingChoice;
 }
