@@ -4,6 +4,12 @@
 > that's running on the [OITO protocol](https://github.com/MetatechID/jaringan-dagang-protocol)
 > network.
 
+## Midtrans compatibility
+
+Protocol baseline: `7131a198df69f337c2fe44f4b5435c18a74a165d`. `midtrans` uses hosted `invoice_url` with stable `invoice_id`; legacy cart `qr_image_url` is a hosted URL alias, never QR content for this provider. Provider restoration recognizes Midtrans; payment confirmation still depends on BAP order polling, not redirect parameters. External-tab link remains available if iframe embedding fails. Channels are selected on hosted page and depend on merchant configuration.
+
+Credentials (`MIDTRANS_SERVER_KEY`, `MIDTRANS_ENVIRONMENT`, optional `MIDTRANS_MERCHANT_ID`) belong only to BAP operator runtime. Schema migration is explicit, not SDK-owned. Automatic Midtrans refunds/payouts are unsupported; HOLD bookkeeping does not establish settlement guarantees. No SDK publication or private-vendor synchronization is implicit.
+
 ## Components
 
 | Component | What it does |

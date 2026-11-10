@@ -57,6 +57,19 @@ function cleanup(root: Root, container: HTMLElement) {
 }
 
 describe("StepPayment", () => {
+  it.each([false, true])("renders Midtrans hosted checkout, including legacy alias=%s", (legacy) => {
+    const url = "https://app.sandbox.midtrans.com/payment-links/test";
+    useBeliAmanMock.mockReturnValue(paymentContext({
+      paymentProvider: "midtrans",
+      invoice: { provider: "midtrans", invoice_id: "mid-1", invoice_url: legacy ? null : url, qr_image_url: url },
+    }));
+    const { container, root } = renderStep();
+    expect(container.querySelector("iframe")?.getAttribute("src")).toBe(url);
+    expect(container.querySelector(`a[href="${url}"]`)).not.toBeNull();
+    expect(container.querySelector("img, svg")).toBeNull();
+    expect(container.textContent).toContain("Midtrans");
+    cleanup(root, container);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
   });
