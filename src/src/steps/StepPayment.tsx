@@ -58,7 +58,8 @@ export function QrisCard({
 export function StepPayment() {
   const { order, invoice, refreshOrder, goTo, paymentProvider } = useBeliAman();
   const total = order?.total_idr ?? 0;
-  const invoiceUrl = invoice?.invoice_url?.trim() || null;
+  const isMidtrans = paymentProvider === "midtrans" || invoice?.provider === "midtrans";
+  const invoiceUrl = invoice?.invoice_url?.trim() || (isMidtrans ? invoice?.qr_image_url?.trim() : null) || null;
   const expiresAt = invoice?.expires_at;
   const normalizedQris = getQrisPayment(invoice);
   const invoiceUrlIsImage = isImageUrl(invoiceUrl);
@@ -69,7 +70,7 @@ export function StepPayment() {
   // Dipay's signed development mock is a real hosted checkout page and carries
   // no qris_* fields. Keep that URL usable, but never treat an obvious image
   // asset (including a PNG supplied only as invoice_url) as hosted checkout.
-  const shouldRenderQris = hasQr || (isQrisProvider && !invoiceUrl);
+  const shouldRenderQris = !isMidtrans && (hasQr || (isQrisProvider && !invoiceUrl));
 
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   useEffect(() => {

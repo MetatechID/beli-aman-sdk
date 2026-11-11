@@ -1,5 +1,11 @@
 # @jaringan-dagang/beli-aman-sdk
 
+## Midtrans hosted payments
+
+Set `paymentProvider: "midtrans"` for a BAP brand configured for Midtrans. SDK opens hosted checkout and polls authoritative order state; browser return does not prove payment. Available payment channels depend on operator's Midtrans account. Automatic Midtrans payouts/refunds are **not supported**; generic escrow/release descriptions below do not promise Midtrans settlement automation.
+
+Compatible protocol baseline: `7131a198df69f337c2fe44f4b5435c18a74a165d`. Operator must review/apply explicit BAP schema migration separately and configure global server-only `MIDTRANS_SERVER_KEY`, `MIDTRANS_ENVIRONMENT`, optional `MIDTRANS_MERCHANT_ID`. Never pass these through SDK props or browser/build configuration. See protocol `apps/beli-aman-bap/MIDTRANS.md`. Private vendored SDK is maintained separately; no automatic linking or publication.
+
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@jaringan-dagang/beli-aman-sdk)](https://www.npmjs.com/package/@jaringan-dagang/beli-aman-sdk)
 

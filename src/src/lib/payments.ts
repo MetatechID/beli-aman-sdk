@@ -11,7 +11,7 @@
 // receives it via the `paymentProvider` prop on <BeliAmanButton> and stores
 // it on the BeliAmanProvider context.
 
-export type PaymentProvider = "xendit" | "oy" | "sento" | "dipay";
+export type PaymentProvider = "xendit" | "oy" | "sento" | "dipay" | "midtrans";
 
 export interface PaymentMethod {
   key: string;
@@ -24,6 +24,7 @@ export const PROVIDER_LABEL: Record<PaymentProvider, string> = {
   oy: "OY Indonesia",
   sento: "Sento",
   dipay: "Dipay",
+  midtrans: "Midtrans",
 };
 
 // Static map of categories each gateway exposes. Update if a
@@ -49,6 +50,7 @@ export const PROVIDER_METHODS: Record<PaymentProvider, PaymentMethod[]> = {
     { key: "RETAIL", label: "Gerai Retail", icon: "🏪" },
   ],
   dipay: [{ key: "QRIS", label: "QRIS", icon: "🔳" }],
+  midtrans: [{ key: "HOSTED", label: "Pembayaran via Midtrans", icon: "↗" }],
 };
 
 export function getMethods(provider: PaymentProvider | undefined | null): PaymentMethod[] {

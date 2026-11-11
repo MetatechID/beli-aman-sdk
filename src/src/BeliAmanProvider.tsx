@@ -559,7 +559,8 @@ function asPaymentProvider(value: unknown): PaymentProvider | null {
   return normalized === "xendit" ||
     normalized === "oy" ||
     normalized === "sento" ||
-    normalized === "dipay"
+    normalized === "dipay" ||
+    normalized === "midtrans"
     ? normalized
     : null;
 }
@@ -591,6 +592,8 @@ function paymentProviderLabel(provider: PaymentProvider | null | undefined): str
       return "Sento";
     case "dipay":
       return "Dipay";
+    case "midtrans":
+      return "Midtrans";
     default:
       return "Xendit";
   }

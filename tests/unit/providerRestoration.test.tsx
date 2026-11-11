@@ -218,6 +218,18 @@ describe("BeliAmanProvider payment restoration", () => {
     container.remove();
   });
 
+  it("restores Midtrans from authoritative order snapshot", async () => {
+    window.sessionStorage.setItem("ba_flow_v1", JSON.stringify({ step: "payment", brandSlug: "brand", items: [{ sku: "SKU-1", qty: 1 }], paymentProvider: "xendit", orderId: ORDER.id, resumeUrl: window.location.href }));
+    apiMocks.getOrder.mockResolvedValue({ ...ORDER, payment_method_snapshot: { payment_provider: "midtrans", invoice_id: "mid-1", invoice_url: "https://app.sandbox.midtrans.com/payment-links/test" } });
+    let latest: ReturnType<typeof useBeliAman> | undefined;
+    const { root, container } = renderProvider((value) => { latest = value; });
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(latest?.paymentProvider).toBe("midtrans");
+    expect(latest?.invoice?.invoice_url).toBe("https://app.sandbox.midtrans.com/payment-links/test");
+    act(() => root.unmount());
+    container.remove();
+  });
+
   it("retries invoice creation for a CART_REVIEWED order without reviewing it again", async () => {
     apiMocks.createOrder.mockResolvedValue(CREATED_ORDER);
     apiMocks.advanceAuth.mockResolvedValue(AUTHED_ORDER);
